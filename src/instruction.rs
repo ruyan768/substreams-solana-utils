@@ -120,9 +120,8 @@ impl<'a> LogStack<'a> {
         if PROGRAMS_WITHOUT_LOGGING.iter().any(|x| *x == program_id) || self.is_truncated {
             return;
         }
-        loop {
-            let log = logs.next().unwrap();
-
+        
+        while let Some(log) = logs.next() {
             if log.is_truncated() {
                 self.is_truncated = true;
                 break;
@@ -130,7 +129,11 @@ impl<'a> LogStack<'a> {
                 self.stack.push(vec![log]);
                 break;
             } else {
-                self.stack.last_mut().unwrap().push(log);
+                if let Some(last) = self.stack.last_mut() {
+                    last.push(log);
+                } else {
+                    self.stack.push(vec![log]);
+                }
             }
         }
     }
@@ -146,22 +149,28 @@ impl<'a> LogStack<'a> {
             return None;
         }
 
-        loop {
-            let log = logs.next().unwrap();
-
+        while let Some(log) = logs.next() {
             if log.is_truncated() {
                 self.is_truncated = true;
                 return None;
             } else if log.is_invoke() {
-                panic!("Unexpected invoke log");
+                eprintln!("Unexpected invoke log");
+                return None;
             }
 
             let is_success = log.is_success();
-            self.stack.last_mut().unwrap().push(log);
-            if is_success {
-                return self.stack.pop()
+            
+            if let Some(last) = self.stack.last_mut() {
+                last.push(log);
+                if is_success {
+                    return self.stack.pop();
+                }
+            } else {
+                return None;
             }
         }
+        
+        None
     }
 }
 
@@ -243,7 +252,7 @@ pub trait StructuredInstructions<'a> {
 }
 
 impl<'a> StructuredInstructions<'a> for Vec<Rc<StructuredInstruction<'a>>> {
-    fn flattened(&self) -> Vec<Rc<StructuredInstruction<'a>>> {
+    fn flattened(&self) -> Vec<Rc<StructuredInstruction>> {
         let mut instructions: Vec<Rc<StructuredInstruction>> = Vec::new();
         for instruction in self {
             instructions.push(Rc::clone(instruction));
