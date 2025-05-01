@@ -252,8 +252,8 @@ pub trait StructuredInstructions<'a> {
 }
 
 impl<'a> StructuredInstructions<'a> for Vec<Rc<StructuredInstruction<'a>>> {
-    fn flattened(&self) -> Vec<Rc<StructuredInstruction>> {
-        let mut instructions: Vec<Rc<StructuredInstruction>> = Vec::new();
+    fn flattened(&self) -> Vec<Rc<StructuredInstruction<'a>>> {
+        let mut instructions: Vec<Rc<StructuredInstruction<'a>>> = Vec::new();
         for instruction in self {
             instructions.push(Rc::clone(instruction));
             instructions.extend(instruction.inner_instructions().flattened().iter().map(Rc::clone));
